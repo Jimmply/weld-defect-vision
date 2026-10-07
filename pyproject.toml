@@ -1,0 +1,42 @@
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "weld-defect-vision"
+version = "0.1.0"
+description = "YOLOv8 instance segmentation of welding defects on radiograph imagery — Streamlit demo + inference pipeline"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.10"
+authors = [{ name = "Dmitry Shurkhai", email = "etozhejimmy@gmail.com" }]
+keywords = ["computer-vision", "welding", "defect-detection", "yolov8", "manufacturing", "aerospace"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Scientific/Engineering :: Image Recognition",
+]
+dependencies = [
+    "numpy>=1.24,<2",
+    "pandas>=2.0.0",
+    "pillow>=10.0.0",
+    "opencv-python-headless>=4.9.0",
+    "torch>=2.1.0",
+    "torchvision>=0.16.0",
+    "ultralytics>=8.1.0",
+    "albumentations>=1.4.0",
+    "matplotlib>=3.8.0",
+    "pyyaml>=6.0",
+    "streamlit>=1.32.0",
+    "plotly>=5.18.0",
+    "kagglehub>=0.2.0",
+    "tqdm>=4.66.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7.0", "pytest-cov>=4.0", "ruff>=0.4.0"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v --tb=short"

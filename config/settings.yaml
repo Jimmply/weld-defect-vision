@@ -1,0 +1,54 @@
+data:
+  kaggle_dataset: "bemorekgg/welding-defect-segmentation-dataset"   # SAM-generated masks + YOLO bboxes
+  raw_dir: "data/raw"
+  processed_dir: "data/processed"
+
+classes:
+  # Defect class names — final list is set after EDA, these are the common weld-radiograph defect types.
+  - crack
+  - porosity
+  - lack_of_fusion
+  - undercut
+  - slag_inclusion
+
+split:
+  train_frac: 0.70
+  val_frac: 0.15
+  test_frac: 0.15
+  random_seed: 42
+  # Weld-session split prevents the same session's frames showing up in train+test.
+  stratify_by: "weld_session"
+
+training:
+  model: "yolov8n-seg.pt"            # start small; swap to yolov8s-seg.pt once pipeline is validated
+  image_size: 640
+  epochs: 50
+  batch_size: 16
+  patience: 15                        # early stopping
+  optimizer: "AdamW"
+  lr0: 0.001
+  lrf: 0.01
+  weight_decay: 0.0005
+  warmup_epochs: 3.0
+  device: "cpu"                       # override to "0" (first CUDA GPU) when training
+
+augmentations:
+  # Weld-specific — avoid vertical flips (bead-direction matters), use mild rotation.
+  hflip: 0.5
+  vflip: 0.0
+  rotate_degrees: 10
+  brightness: 0.2
+  contrast: 0.2
+  noise_std: 0.01
+  cutout_fraction: 0.05
+
+evaluation:
+  metrics: ["mAP50", "mAP50-95", "precision", "recall"]
+  confusion_matrix: true
+  per_class_breakdown: true
+
+streamlit:
+  page_title: "Weld Defect Vision"
+  page_icon: "🔥"
+  default_conf: 0.25
+  default_iou: 0.45
