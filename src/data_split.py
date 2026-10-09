@@ -19,6 +19,10 @@ logger = logging.getLogger(__name__)
 
 SESSION_PATTERN = re.compile(r"^([a-zA-Z0-9_-]+?)(?:_\d+)?\.(?:png|jpg|jpeg)$", re.IGNORECASE)
 
+# Roboflow augmented filenames look like  <source>.rf.<hash>.<ext>
+# where <source> is the real image id and <hash> changes per augmentation.
+ROBOFLOW_SPLIT = re.compile(r"\.rf\.[0-9a-f]+", re.IGNORECASE)
+
 
 @dataclass
 class SplitConfig:
@@ -40,21 +44,39 @@ def session_from_filename(filename: str) -> str:
     return match.group(1)
 
 
-def group_by_session(filenames: list[str]) -> dict[str, list[str]]:
+def roboflow_session_from_filename(filename: str) -> str:
+    """Extract the source image stem from a Roboflow-augmented filename.
+
+    Roboflow saves augmentations as ``<source>.rf.<hash>.<ext>`` where the
+    same ``<source>`` can appear multiple times (one per augmentation). We
+    group by ``<source>`` so augmented variants of the same real image don't
+    get split across train / val / test.
+    """
+    stem = Path(filename).stem
+    parts = ROBOFLOW_SPLIT.split(stem, maxsplit=1)
+    return parts[0] if parts else stem
+
+
+def group_by_session(
+    filenames: list[str],
+    session_fn=session_from_filename,
+) -> dict[str, list[str]]:
     """Return ``{session_id: [file1, file2, ...]}`` for a list of image filenames."""
     groups: dict[str, list[str]] = defaultdict(list)
     for f in filenames:
-        groups[session_from_filename(f)].append(f)
+        groups[session_fn(f)].append(f)
     return dict(groups)
 
 
 def session_stratified_split(
     filenames: list[str],
     config: SplitConfig | None = None,
+    session_fn=session_from_filename,
 ) -> dict[str, list[str]]:
     """Split so that no weld session is in more than one of train/val/test.
 
     Returns ``{"train": [...], "val": [...], "test": [...]}``.
+    Pass ``session_fn=roboflow_session_from_filename`` for Roboflow-augmented data.
     """
     config = config or SplitConfig()
     assert abs(config.train_frac + config.val_frac + config.test_frac - 1.0) < 1e-6, \
@@ -63,7 +85,7 @@ def session_stratified_split(
     import random
     rng = random.Random(config.random_seed)
 
-    groups = group_by_session(filenames)
+    groups = group_by_session(filenames, session_fn=session_fn)
     sessions = sorted(groups.keys())
     rng.shuffle(sessions)
 

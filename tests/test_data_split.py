@@ -12,6 +12,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from data_split import (
     SplitConfig,
     group_by_session,
+    roboflow_session_from_filename,
     session_from_filename,
     session_stratified_split,
 )
@@ -69,3 +70,43 @@ def test_split_fractions_must_sum_to_one():
     files = ["a_0.jpg"]
     with pytest.raises(AssertionError):
         session_stratified_split(files, SplitConfig(train_frac=0.8, val_frac=0.1, test_frac=0.2))
+
+
+def test_roboflow_session_strips_augmentation_hash():
+    # Real Kaggle filenames from bemorekgg/welding-defect-segmentation-dataset
+    assert roboflow_session_from_filename(
+        "0e538f39-1d30436c-c23_jpg.rf.05ff78024b481ae4fada24ef439ebd97.jpg"
+    ) == "0e538f39-1d30436c-c23_jpg"
+    assert roboflow_session_from_filename(
+        "116e2e9b-6b433071-download_2_jpeg_jpg.rf.476154d28d24d7450321e4ae5b581f2e.png"
+    ) == "116e2e9b-6b433071-download_2_jpeg_jpg"
+
+
+def test_roboflow_session_passthrough_on_non_roboflow_names():
+    # Should not crash on filenames without an .rf. segment
+    assert roboflow_session_from_filename("plain_image.jpg") == "plain_image"
+
+
+def test_split_with_roboflow_session_fn_keeps_augmentations_together():
+    # Two source images, each with 3 augmentation variants
+    files = [
+        f"source_A_jpg.rf.{h}.jpg" for h in ["aaaaaaaa", "bbbbbbbb", "cccccccc"]
+    ] + [
+        f"source_B_jpg.rf.{h}.jpg" for h in ["dddddddd", "eeeeeeee", "ffffffff"]
+    ]
+    split = session_stratified_split(
+        files,
+        SplitConfig(train_frac=0.5, val_frac=0.5, test_frac=0.0, random_seed=0),
+        session_fn=roboflow_session_from_filename,
+    )
+
+    def source_of(fname: str) -> str:
+        return roboflow_session_from_filename(fname)
+
+    for bucket in ("train", "val", "test"):
+        sources_in_bucket = {source_of(f) for f in split[bucket]}
+        # Each source either entirely in or entirely out of the bucket
+        for src in sources_in_bucket:
+            source_files = [f for f in files if source_of(f) == src]
+            assert all(f in split[bucket] for f in source_files), \
+                f"source {src!r} was split across buckets"

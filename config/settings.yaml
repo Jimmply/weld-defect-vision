@@ -4,12 +4,13 @@ data:
   processed_dir: "data/processed"
 
 classes:
-  # Defect class names — final list is set after EDA, these are the common weld-radiograph defect types.
-  - crack
-  - porosity
-  - lack_of_fusion
-  - undercut
-  - slag_inclusion
+  # The Kaggle dataset (bemorekgg/welding-defect-segmentation-dataset) ships
+  # with 3 numeric class IDs (0, 1, 2) and NO class names file. Using generic
+  # names until manual inspection of representative samples assigns real
+  # defect labels (crack / porosity / lack_of_fusion / etc.).
+  - class_0
+  - class_1
+  - class_2
 
 split:
   train_frac: 0.70
