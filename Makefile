@@ -1,4 +1,4 @@
-.PHONY: setup download train app test clean help
+.PHONY: setup download prepare train app test clean help
 
 PYTHON := .venv/bin/python
 STREAMLIT := .venv/bin/streamlit
@@ -8,6 +8,7 @@ help:
 	@echo "targets:"
 	@echo "  make setup       create venv + install deps"
 	@echo "  make download    fetch the welding-defect dataset from Kaggle"
+	@echo "  make prepare     split raw -> data/processed/{images,labels}/{train,val,test} + data.yaml"
 	@echo "  make train       train YOLOv8 (defaults from config/settings.yaml)"
 	@echo "  make app         launch the Streamlit defect-detection demo"
 	@echo "  make test        run pytest"
@@ -21,6 +22,9 @@ setup:
 
 download:
 	$(PYTHON) scripts/download_data.py
+
+prepare:
+	$(PYTHON) scripts/prepare_dataset.py
 
 train:
 	$(PYTHON) scripts/train.py
