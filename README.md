@@ -18,13 +18,40 @@ Everyone's XGBoost repo looks the same. CV + manufacturing is the single most-se
 | Component | Status |
 |---|---|
 | Dataset download via `kagglehub` | ✅ `scripts/download_data.py` |
-| Weld-session-stratified splitter | ✅ `src/data_split.py` + 7 tests |
+| Weld-session-stratified splitter | ✅ `src/data_split.py` + 10 tests |
+| **Roboflow-aware session grouping** | ✅ handles the `<source>.rf.<hash>` augmentation pattern used by the Kaggle dataset |
+| **Dataset prep → YOLOv8 layout** | ✅ `scripts/prepare_dataset.py` — produces `data/processed/data.yaml` + train/val/test image+label trees |
 | YOLOv8-seg training script | ✅ `scripts/train.py` with config overrides |
 | Streamlit upload-and-detect demo | ✅ `src/app.py` |
 | Evaluation metrics scaffolding | ✅ `src/metrics.py` + 2 tests |
 | CI (3.10 / 3.11 / 3.12) | ✅ |
 | Full training run + results table | ⏳ **next commit** |
 | Streamlit screenshot / demo GIF | ⏳ **next commit** |
+
+## Dataset snapshot (after `make download && python scripts/prepare_dataset.py`)
+
+Honest numbers from the actual Kaggle release:
+
+| Metric | Value |
+|---|---|
+| Raw images (JPGs) | 1,619 |
+| Unique source sessions (pre-Roboflow) | **907** — most have 2 augmentations each |
+| YOLO bbox labels | 1,619 (one per image, no orphans) |
+| Segmentation masks (PNG) | 1,601 |
+| Train / Val / Test images | **1,117 / 257 / 245** (session-stratified, 70/15/15) |
+| Classes used in labels | **3** — IDs `0`, `1`, `2`. See caveat below. |
+
+### Class distribution per bucket (bboxes)
+
+| Class ID | Train | Val | Test |
+|---|---|---|---|
+| 0 | 763 | 158 | 168 |
+| 1 | 1,345 | 257 | 294 |
+| 2 | 1,072 | 304 | 222 |
+
+### Caveat worth logging
+
+The Kaggle dataset ships **no `classes.txt` or `data.yaml`** — only the three numeric class IDs. Config currently labels them `class_0 / class_1 / class_2` with a note. Before the next training run I'll inspect ~20 sample images per class and assign real defect labels (crack / porosity / lack-of-fusion / etc.) based on visual inspection. This is the kind of real-world data-wrangling gap that no amount of reading the Kaggle page would have surfaced.
 
 ## Why weld-session-stratified splitting
 
@@ -88,7 +115,8 @@ weld-defect-vision/
 
 - [ ] Full training run + populate the Results section with real mAP@50 / mAP@50-95 per class
 - [ ] Streamlit screenshot + 30-second demo GIF
-- [ ] `prepare_dataset.py` script that converts the raw Kaggle layout to YOLOv8 structure
+- [x] `prepare_dataset.py` script that converts the raw Kaggle layout to YOLOv8 structure. **Done — 1,117/257/245 session-stratified split on 907 unique source images.**
+- [ ] **Resolve class IDs → real defect names** — Kaggle release has no `classes.txt`; manual inspection next.
 - [ ] Augmentation ablation — do weld-specific augmentations (rotation but not vflip, mild brightness) actually help?
 - [ ] Confusion-matrix analysis — which defect pairs does the model confuse?
 - [ ] Export to ONNX for low-latency inference on shop-floor hardware
